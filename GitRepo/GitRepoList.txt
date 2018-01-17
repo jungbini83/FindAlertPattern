@@ -1,0 +1,3 @@
+git://github.com/real-logic/aeron.git
+git://github.com/airbnb/aerosolve.git
+git://github.com/Alluxio/alluxio.git
