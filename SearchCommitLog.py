@@ -1,7 +1,7 @@
 # -*- encoding:utf-8 -*-
 # 특정 키워드와 날짜로 commit 로그를 검색
 import time, shutil
-from git import *
+from git import *                   # GitPython 패키지를 받아야 함
 from GobalFilePath import *
 
 global GIT_REPO_PATH
@@ -13,9 +13,9 @@ def downloadGitPorject(PROJECT_ADDR):
     
     PROJECT_NAME    = PROJECT_ADDR[PROJECT_ADDR.rfind('/')+1:PROJECT_ADDR.rfind('.git')]    
     
-    print 'Cloning ' + PROJECT_NAME + '...'
+    print ('Cloning ' + PROJECT_NAME + '...')
     Repo.clone_from(PROJECT_ADDR, 'GitRepo/' + PROJECT_NAME)
-    print 'done.'
+    print ('done.')
         
 def searchCommitLog(PROJECT_ADDR, KEYWORD):
 
@@ -53,7 +53,7 @@ def searchCommitLog(PROJECT_ADDR, KEYWORD):
                 cleanFileSHA = str(diff_item.b_blob)[0:7]                           # Clean revision First 7 SHA code
                 
                 ### find changed lines ###
-                diffInfo = diff_item.diff.split('\n')
+                diffInfo = str(diff_item.diff).split('\n')
                 changedLines = list()
                 for line in diffInfo:                        
                     if "@@" in line:
@@ -102,16 +102,16 @@ def downloadRev(PROJECT_ADDR):
         # download buggy revision file
         cmd_result = os.system('git show ' + buggyRevisionNum + ' > ' + BUGGY_DOWNLOAD_PATH + '[' + buggyRevisionNum + ']' + fileName)        
         if not cmd_result == 0:
-            print 'error occurred for buggy revision file...\n'
+            print ('error occurred for buggy revision file...\n')
             pass
         else:
             # download clean revision file if buggy revision file is downloaded successfully
             cmd_result = os.system('git show ' + cleanRevisionNum + ' > ' + CLEAN_DOWNLOAD_PATH + '[' + cleanRevisionNum + ']' + fileName)        
             if not cmd_result == 0:
-                print 'error occurred for buggy revision file...\n'
+                print ('error occurred for buggy revision file...\n')
                 os.remove(BUGGY_DOWNLOAD_PATH + '[' + buggyRevisionNum + ']' + fileName)
                 pass
             else:
-                print BUGGY_DOWNLOAD_PATH + '[' + buggyRevisionNum + ']' + fileName + ' (' + str(round((float(readLineNum)/num_lines)*100,2)) + '%)'
+                print (BUGGY_DOWNLOAD_PATH + '[' + buggyRevisionNum + ']' + fileName + ' (' + str(round((float(readLineNum)/num_lines)*100,2)) + '%)')
                 
     os.chdir(cwd)

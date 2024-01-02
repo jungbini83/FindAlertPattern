@@ -6,7 +6,7 @@ GIT_REPO_PATH       = 'GitRepo/'
 TOOL_PATH           = 'Tools/'
 PMD_PATH            = TOOL_PATH + 'PMD-6.0.0/'
 GIT_PROJECT_LIST    = [projects for projects in open(GIT_REPO_PATH + 'GitRepoList.txt', 'r')]
-PRJECT_LIST         = ['aeron', 'aerosolve', 'alluxio']
+JAVA_CATEGORY_LIST = ['']
 
 if not os.path.exists(GIT_REPO_PATH):                   # GIT_REPO path
     os.makedirs(GIT_REPO_PATH)

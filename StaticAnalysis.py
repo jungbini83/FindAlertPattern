@@ -7,22 +7,22 @@ from GobalFilePath import *
 
 BUG_TYPE        = ['BUGGY', 'CLEAN']
 
+# 1. Run PMD against Buggy and Clean src code
 def runPMD(PROJECT_NAME):
     
-    PROJECT_PATH    = GIT_REPO_PATH + PROJECT_NAME + '/'
+    PROJECT_PATH = GIT_REPO_PATH + PROJECT_NAME + '/'
         
-    DN_PATH         = PROJECT_PATH + 'DOWNLOAD/'
-    SA_RESULT_PATH  = PROJECT_PATH + 'SA_RESULT/'
+    DN_PATH = PROJECT_PATH + 'DOWNLOAD/'
+    SA_RESULT_PATH = PROJECT_PATH + 'SA_RESULT/'
     if not os.path.exists(SA_RESULT_PATH):                   # Static analysis result output path
         os.makedirs(SA_RESULT_PATH)
     
-    cwd = os.getcwd()
+    cwd = os.getcwd()                                       # save current path
     for bugType in BUG_TYPE:
         
-        os.chdir(PMD_PATH + 'bin/')
-        
-        print PROJECT_NAME + ' ' + bugType + ' analysis by PMD...\n'  
-        
+        os.chdir(PMD_PATH + 'bin/')                         # move to pmd binary path
+
+        print (PROJECT_NAME + ' ' + bugType + ' analysis by PMD...\n')
         cmd_result = os.system('pmd -d ../../../'+ DN_PATH + bugType + '/' + ' -f csv -R rulesets/java/basic.xml,rulesets/java/braces.xml,rulesets/java/clone.xml,'+
                                'rulesets/java/codesize.xml,rulesets/java/comments.xml,rulesets/java/controversial.xml,rulesets/java/coupling.xml,rulesets/java/design.xml,'+
                                'rulesets/java/empty.xml,rulesets/java/finalizers.xml,rulesets/java/imports.xml,rulesets/java/j2ee.xml,rulesets/java/javabeans.xml,'+
@@ -31,39 +31,44 @@ def runPMD(PROJECT_NAME):
                                'rulesets/java/typeresolution.xml,rulesets/java/unnecessary.xml,rulesets/java/unusedcode.xml > ../../../' + SA_RESULT_PATH + bugType + '_PMD.txt')
         
         if not cmd_result == 0:
-            print 'Error occurred...\n'
+            print ('Error occurred...\n')
         
-        os.chdir(cwd)
+        os.chdir(cwd)                                       # restore previous path (project path)
         
         RESULT_FILE = open(SA_RESULT_PATH + bugType + '_PMD.txt', 'r')
         OUT_FILE = open(SA_RESULT_PATH + bugType + '_RESULT.txt', 'w')
               
+        # parsing raw PMD output file to new format
         for line in RESULT_FILE:
              
             if (not line.startswith('Removed') and not line.startswith('\"Problem') and line.startswith('\"')):
-                 
-                alertToken = re.match('"(\d+)","(.*)","(.*)","(\d+)","(\d+)","(.*)","(.*)","(.*)"', line)   # Find result line of PMD
+
+                # Find result line of PMD
+                alertToken = re.match('"(\d+)","(.*)","(.*)","(\d+)","(\d+)","(.*)","(.*)","(.*)"', line)
              
                 ### Tokenize the result line ###
                 if alertToken:
-                    filename = alertToken.group(3).replace('\\', '/')                         # ���� �̸�, Alert �̸�, ���� ���� ����
+                    filename = alertToken.group(3).replace('\\', '/')       # repalce \\ to /
                     filename = filename[filename.rfind('/')+1:]
                     alertline = alertToken.group(5)
                     alertname = alertToken.group(8)                                                             
                      
                     OUT_FILE.write(filename + ',' + alertline + ',' + alertname + '\n')
+
+        RESULT_FILE.close()
+        OUT_FILE.close()
+
+        os.remove(SA_RESULT_PATH + bugType + '_PMD.txt')                # remove raw pmd output file
                     
-def bugRelatedLines():
+def bugRelatedLines(log_path):
     
     buggyFileInfo = OrderedDict()
     cleanFileInfo = OrderedDict()
     
-    for line in open(LOG_PATH + 'BUG_RELATED.txt'):
-        
-        if '(deleted)' in line: continue                     # (deleted) is removed File            
-        
+    for line in open(log_path + 'BUG_RELATED.txt'):
+
         tokenLine = line.split(',')
-        revDate = tokenLine[0]
+        revDate = tokenLine[0]                                            # not used now
         filePath = tokenLine[1]
         fileName = filePath[filePath.rfind('/')+1:]
         buggyRevNum = tokenLine[2]
@@ -71,7 +76,7 @@ def bugRelatedLines():
         
         if not buggyFileInfo.has_key('[' + buggyRevNum + ']' + fileName):        
             buggyFileInfo['[' + buggyRevNum + ']' + fileName] = list()
-        else:                                                                   # �̹� ���� �������� ������ �ִٸ�, ���� ���Ϸ� �ѱ��(��¥�� �ٸ��� ���� �������� �ִ� ��찡 ����)
+        else:
             continue
         if not cleanFileInfo.has_key('[' + cleanRevNum + ']' + fileName):
             cleanFileInfo['[' + cleanRevNum + ']' + fileName] = list()
@@ -83,12 +88,11 @@ def bugRelatedLines():
             
     return buggyFileInfo, cleanFileInfo
 
-def getRevisionPair():
+def getRevisionPair(log_path):
     
     RevPairDict = dict()
-    for line in open(LOG_PATH + 'BUG_RELATED.txt'):
-        if '(deleted)' in line: continue                     # (deleted) is removed File            
-        
+    for line in open(log_path + 'BUG_RELATED.txt'):
+
         tokenLine = line.split(',')
         filePath = tokenLine[1]
         fileName = filePath[filePath.rfind('/')+1:]
@@ -114,7 +118,7 @@ def getWarningInfo(filePath):
     return FileInfoDict
 
 # Ư�� ����(Fix change)���� ���ݵ� warning �� �������� �Լ�
-def getFixedWarningList(violatedLines, warningInfoDict):
+def getFixedWarningList(CATEGORY_LIST, violatedLines, warningInfoDict):
     
     bStartLine  = int(violatedLines.split('/')[0])                                       # Buggy File�� bug related ���� ����            
     bEndLine    = bStartLine + int(violatedLines.split('/')[1]) - 1                      # Buggy File�� bug related �� ����
@@ -129,7 +133,7 @@ def getFixedWarningList(violatedLines, warningInfoDict):
     return FixedWarnList  
 
 # Ư�� ����(Other)���� ���ݵ� warning �� �������� �Լ�
-def getOtherFixedWarningList(violatedLines, warningInfoDict):   
+def getOtherFixedWarningList(CATEGORY_LIST, violatedLines, warningInfoDict):
     
     LineList = []
     for bugLines in violatedLines:
@@ -148,7 +152,7 @@ def getOtherFixedWarningList(violatedLines, warningInfoDict):
     
     return OtherList
 
-def printTotalResult(resultDict, type):
+def printTotalResult(SUMMARY_PATH, CATEGORY_LIST, resultDict, type):
     
     if 'bugrelated' in type:    fileName = SUMMARY_PATH + 'BUGRELATED_TOTAL_RESULT.csv'
     else:                       fileName = SUMMARY_PATH + 'OTHER_TOTAL_RESULT.csv'
@@ -164,7 +168,7 @@ def printTotalResult(resultDict, type):
                 OUT_FILE.write('0,')
         OUT_FILE.write('\n')
          
-def printPrecision(resultDict, totalDict, TrainFileList, type):
+def printPrecision(SUMMARY_PATH, WEIGHT_ALPHA, CATEGORY_LIST, resultDict, totalDict, TrainFileList, type):
     
     OUT_FILE = open(SUMMARY_PATH + type + '_RESULT.csv', 'w')
     
@@ -186,34 +190,40 @@ def printPrecision(resultDict, totalDict, TrainFileList, type):
                     OUT_FILE.write(str(Weight) + ',')                                                    
             OUT_FILE.write('\n') 
 
-def summaryPMDOutput(divRatio, divideType):
-    
-    buggyRelatedLines, cleanRelatedLines = bugRelatedLines()                                            # 1-2. Buggy���ϰ� Clean������ Bug-Related ���� ���� �о����
+def summaryPMDOutput(PROJECT_NAME, CATEGORY_LIST, divRatio, divideType):
+
+    sa_path = PROJECT_NAME + '/STATIC_ANALYSIS/'
+    log_path = PROJECT_NAME + '/COMMIT_LOG/'
+
+    # 1-1. Get bug-related lines from Buggy, Clean src code
+    buggyRelatedLines, cleanRelatedLines = bugRelatedLines(log_path)
     buggyRelatedFiles = buggyRelatedLines.keys()
     
-    # Train ���� �����ϱ� (���1: ������ ������ Training ���Ϸ�, ���ο� ������ Test��/���2: �������� ������)
-    TrainFileRatio   = int(len(buggyRelatedLines.keys()) * divRatio)
+    # 1-2. Divide train, test dataset using divRatio from Buggy src code
+    TrainFileRatio = int(len(buggyRelatedLines.keys()) * divRatio)
     
+    # dividing typy= (normal: divide train and test src code by time sequence), (random: divide randomly train and test src code)
     if 'normal' in divideType:
-        TrainFileList = [fileName for fileName in buggyRelatedFiles[TrainFileRatio+1:]]                     # ���1 (Old: Training, New: Test)
+        TrainFileList = [fileName for fileName in buggyRelatedFiles[TrainFileRatio+1:]]
     elif 'random' in divideType:
-        TrainFileList = random.sample(buggyRelatedFiles, TrainFileRatio)                                    # ���2 (Old: Random, New: Random)
-    
-    RevPairDict = getRevisionPair()                                                                     # 1-3. Buggy, Clean revision number Pair ���ϱ�                                                                  
-    
-    BuggyFileInfoDict = getWarningInfo(FILE_PATH + 'STATIC_ANALYSIS/BUGGY_RESULT.txt')                  # 2. Buggy File/Clean File Warning ���� ����
-    CleanFileInfoDict = getWarningInfo(FILE_PATH + 'STATIC_ANALYSIS/CLEAN_RESULT.txt')                                                                       
+        TrainFileList = random.sample(buggyRelatedFiles, TrainFileRatio)
+
+    # 1-3. Get pairs including Buggy, Clean revision number
+    RevPairDict = getRevisionPair(log_path)
+
+    # 2. Get warnings from Buggy and Clean src code
+    BuggyFileInfoDict = getWarningInfo(sa_path + 'BUGGY_RESULT.txt')
+    CleanFileInfoDict = getWarningInfo(sa_path + 'CLEAN_RESULT.txt')
         
-    REL_FINAL_COUNTER       = dict()                                                                    # Bug Related ���ο��� '������' Warning ������ �����ϴ� Dictionary
-    OTHER_FINAL_COUNTER     = dict()                                                                    # Other ���ο��� '������' Warning ������ �����ϴ� Dictionary
-    REL_TotalTotalCounter   = dict()                                                                    # Bug Related ������ '���' Warning ������ �����ϴ� Dictionary
-    OTHER_TotalTotalCounter = dict()                                                                    # Other ������ '���' Warning ������ �����ϴ� Dictionary
-    fileCnt = 0
+    REL_FINAL_COUNTER = dict()                          # Dictinary including warnings from bug related srr code
+    OTHER_FINAL_COUNTER = dict()                        # Dictinary including warnings from bug free src code
+    REL_TotalTotalCounter = dict()                      # # of warnings in bug related src code
+    OTHER_TotalTotalCounter = dict()                    # # of warnings in bug free src code
     for fileName, violatedLineList in buggyRelatedLines.items():
         
-        if not BuggyFileInfoDict.has_key(fileName):                 continue                            # �ش� ������ Buggy/CleanFileInfoDict�� ���ٸ�, ������ �����̹Ƿ� ����            
-        if not CleanFileInfoDict.has_key(RevPairDict[fileName]):    continue
-        if not cleanRelatedLines.has_key(RevPairDict[fileName]):    continue                            # �ϳ��� buggy ��������, �ΰ� �̻��� clean �������� �ִٸ�, �ϳ��� ����ǹǷ� clean revision�� ���� ���� ����. �̶��� �׳� �Ѿ
+        if not BuggyFileInfoDict.has_key(fileName): continue                            # �ش� ������ Buggy/CleanFileInfoDict�� ���ٸ�, ������ �����̹Ƿ� ����
+        if not CleanFileInfoDict.has_key(RevPairDict[fileName]): continue
+        if not cleanRelatedLines.has_key(RevPairDict[fileName]): continue                            # �ϳ��� buggy ��������, �ΰ� �̻��� clean �������� �ִٸ�, �ϳ��� ����ǹǷ� clean revision�� ���� ���� ����. �̶��� �׳� �Ѿ
         
         ################################################################    
         #####             0. ���� ���� �ʱ�ȭ �ϴ� ����            #####
@@ -281,7 +291,7 @@ def summaryPMDOutput(divRatio, divideType):
             
     return TrainFileList
             
-def divideTrainTest(TrainFileList):
+def divideTrainTest(STATIC_ANALYSIS_PATH, SUMMARY_PATH, CATEGORY_LIST, TrainFileList):
     
     TRAIN_NUM = 0
     TEST_NUM = 0
@@ -344,10 +354,10 @@ def divideTrainTest(TrainFileList):
         
         TEST_NUM += 1
         
-    print 'Train Files Number: ' + str(TRAIN_NUM) + ', Test Files Number: ' + str(TEST_NUM)
+    print ('Train Files Number: ' + str(TRAIN_NUM) + ', Test Files Number: ' + str(TEST_NUM))
         
 # Warning�� Fix�� �Ǳ� �� ���� warning�� �� ������ ����(Bug related + Others ���)
-def mergeTotalFile(TrainFileList):
+def mergeTotalFile(STATIC_ANALYSIS_PATH, SUMMARY_PATH, CATEGORY_LIST, TrainFileList):
     
     TRAIN_TOTAL_FILE    = open(STATIC_ANALYSIS_PATH + 'MERGE_RESULT(TRAIN-TOTAL).csv', 'w')
     TEST_TOTAL_FILE     = open(STATIC_ANALYSIS_PATH + 'MERGE_RESULT(TEST-TOTAL).csv', 'w')
