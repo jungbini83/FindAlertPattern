@@ -10,7 +10,7 @@ BUG_TYPE        = ['BUGGY', 'CLEAN']
 # 1. Run PMD against Buggy and Clean src code
 def runPMD(PROJECT_NAME):
     
-    PROJECT_PATH = GIT_REPO_PATH + PROJECT_NAME + '/'
+    PROJECT_PATH = OUTPUT_PATH + PROJECT_NAME + '/'
         
     DN_PATH = PROJECT_PATH + 'DOWNLOAD/'
     SA_RESULT_PATH = PROJECT_PATH + 'SA_RESULT/'

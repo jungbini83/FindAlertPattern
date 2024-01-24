@@ -1,1 +1,2 @@
-https://github.com/airbnb/lottie-android.git
+https://github.com/sirixdb/sirix.git
+https://github.com/wiremock/wiremock.git

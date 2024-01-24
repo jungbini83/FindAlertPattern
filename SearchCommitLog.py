@@ -1,8 +1,10 @@
 # -*- encoding:utf-8 -*-
 # 특정 키워드와 날짜로 commit 로그를 검색
+import os
 import time, shutil
 from git import *                   # GitPython 패키지를 받아야 함
 from GobalFilePath import *
+import stat
 
 global GIT_REPO_PATH
 global SA_RESULT_PATH
@@ -14,14 +16,18 @@ def downloadGitPorject(PROJECT_ADDR):
     PROJECT_NAME    = PROJECT_ADDR[PROJECT_ADDR.rfind('/')+1:PROJECT_ADDR.rfind('.git')]    
     
     print ('Cloning ' + PROJECT_NAME + '...')
-    Repo.clone_from(PROJECT_ADDR, 'GitRepo/' + PROJECT_NAME)
+    try:
+        Repo.clone_from(PROJECT_ADDR, 'GitRepo/' + PROJECT_NAME)
+    except GitCommandError:
+        pass
+
     print ('done.')
         
 def searchCommitLog(PROJECT_ADDR, KEYWORD):
 
     PROJECT_NAME    = PROJECT_ADDR[PROJECT_ADDR.rfind('/')+1:PROJECT_ADDR.rfind('.git')]        
     PROJECT_PATH    = GIT_REPO_PATH + PROJECT_NAME + '/'
-    COMMIT_LOG_PATH = PROJECT_PATH +'COMMIT_LOG/'
+    COMMIT_LOG_PATH = OUTPUT_PATH + PROJECT_NAME + '/COMMIT_LOG/'
 
     if not os.path.exists(COMMIT_LOG_PATH):
         os.makedirs(COMMIT_LOG_PATH)    
@@ -29,7 +35,11 @@ def searchCommitLog(PROJECT_ADDR, KEYWORD):
     OUTFILE = open(COMMIT_LOG_PATH + 'BUG_RELATED.txt', 'w')
     
     repo = Repo(PROJECT_PATH, odbt=GitCmdObjectDB)                          # 다운 받은 Repository Tree 검색         
-    commit_list = [commit for commit in repo.iter_commits('master')]        # Master 브랜치 commit 리스트 받기
+
+    try:
+        commit_list = [commit for commit in repo.iter_commits('main')]        # main 브랜치 commit 리스트 받기
+    except:
+        commit_list = [commit for commit in repo.iter_commits('master')]  # main 브랜치 commit 리스트 받기
     
     for commit_index in range(1,len(commit_list)):
         
@@ -66,25 +76,26 @@ def searchCommitLog(PROJECT_ADDR, KEYWORD):
     
 def downloadRev(PROJECT_ADDR):
     
-    PROJECT_NAME    = PROJECT_ADDR[PROJECT_ADDR.rfind('/')+1:PROJECT_ADDR.rfind('.git')]        
-    PROJECT_PATH    = GIT_REPO_PATH + PROJECT_NAME + '/'
-    
-    BUGGY_DOWNLOAD_PATH   = './DOWNLOAD/BUGGY/'
-    CLEAN_DOWNLOAD_PATH   = './DOWNLOAD/CLEAN/'
-    
+    PROJECT_NAME = PROJECT_ADDR[PROJECT_ADDR.rfind('/')+1:PROJECT_ADDR.rfind('.git')]
+    PROJECT_PATH = GIT_REPO_PATH + PROJECT_NAME + '/'
+    COMMIT_LOG_PATH = '../../' + OUTPUT_PATH + PROJECT_NAME + '/COMMIT_LOG/'
+    DOWNLOAD_PATH = '../../' + OUTPUT_PATH + PROJECT_NAME + '/DOWNLOAD'
+    BUGGY_DOWNLOAD_PATH   = DOWNLOAD_PATH + '/BUGGY/'
+    CLEAN_DOWNLOAD_PATH   = DOWNLOAD_PATH + '/CLEAN/'
+
     cwd = os.getcwd()
     os.chdir(PROJECT_PATH)
-    
+
     if os.path.exists(BUGGY_DOWNLOAD_PATH): shutil.rmtree(BUGGY_DOWNLOAD_PATH)
-    os.makedirs(BUGGY_DOWNLOAD_PATH)                
+    os.makedirs(BUGGY_DOWNLOAD_PATH)
     if os.path.exists(CLEAN_DOWNLOAD_PATH): shutil.rmtree(CLEAN_DOWNLOAD_PATH)
-    os.makedirs(CLEAN_DOWNLOAD_PATH) 
-    
-    num_lines = sum(1 for line in open('./COMMIT_LOG/BUG_RELATED.txt'))              # Count modified revision files
+    os.makedirs(CLEAN_DOWNLOAD_PATH)
+
+    num_lines = sum(1 for line in open(COMMIT_LOG_PATH + 'BUG_RELATED.txt'))              # Count modified revision files
     
     ### download specific revision files ###
     readLineNum = 0
-    for line in open('./COMMIT_LOG/BUG_RELATED.txt', 'r'):
+    for line in open(COMMIT_LOG_PATH + 'BUG_RELATED.txt', 'r'):
         
         readLineNum += 1
         
@@ -106,7 +117,7 @@ def downloadRev(PROJECT_ADDR):
             pass
         else:
             # download clean revision file if buggy revision file is downloaded successfully
-            cmd_result = os.system('git show ' + cleanRevisionNum + ' > ' + CLEAN_DOWNLOAD_PATH + '[' + cleanRevisionNum + ']' + fileName)        
+            cmd_result = os.system('git show ' + cleanRevisionNum + ' > ' + CLEAN_DOWNLOAD_PATH + '[' + cleanRevisionNum + ']' + fileName)
             if not cmd_result == 0:
                 print ('error occurred for buggy revision file...\n')
                 os.remove(BUGGY_DOWNLOAD_PATH + '[' + buggyRevisionNum + ']' + fileName)
@@ -115,3 +126,13 @@ def downloadRev(PROJECT_ADDR):
                 print (BUGGY_DOWNLOAD_PATH + '[' + buggyRevisionNum + ']' + fileName + ' (' + str(round((float(readLineNum)/num_lines)*100,2)) + '%)')
                 
     os.chdir(cwd)
+
+def on_rm_error(func, path, exc_info):
+    os.chmod(path, stat.S_IWRITE)
+    os.unlink(path)
+
+def remove_project_dir(PROJECT_ADDR):
+    PROJECT_NAME = PROJECT_ADDR[PROJECT_ADDR.rfind('/') + 1:PROJECT_ADDR.rfind('.git')]
+    PROJECT_PATH = GIT_REPO_PATH + PROJECT_NAME + '/'
+
+    shutil.rmtree(PROJECT_PATH, onerror=on_rm_error)                     # remove cloned repository
