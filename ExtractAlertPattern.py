@@ -13,16 +13,19 @@ def saveAlertPattern(SAResults, StartLine, EndLine):
         return patternList
          
 def extractAlertPattern(PROJECT_NAME):
-     
-    PROJECT_PATH    = GIT_REPO_PATH + PROJECT_NAME + '/'
-    COMMIT_LOG_PATH = PROJECT_PATH +'COMMIT_LOG/'
-    SA_RESULT_PATH  = PROJECT_PATH + 'SA_RESULT/'
-    
+
+    COMMIT_LOG_PATH = OUTPUT_PATH + PROJECT_NAME + '/COMMIT_LOG/'
+    SA_RESULT_PATH  = OUTPUT_PATH + PROJECT_NAME + '/SA_RESULT/'
+    RELATED_ALERTS_PATH = OUTPUT_PATH + PROJECT_NAME + '/RELATED/'
+
+    if not os.path.exists(RELATED_ALERTS_PATH):
+        os.makedirs(RELATED_ALERTS_PATH)
+
     BuggySAResultList = [resultFile for resultFile in open(SA_RESULT_PATH + 'BUGGY_RESULT.txt')]        
     CleanSAResultList = [resultFile for resultFile in open(SA_RESULT_PATH + 'CLEAN_RESULT.txt')]
      
-    BUGGY_OUTPUT_FILE     = open(RELATED_ALERTS_PATH + 'BUGGY/OUTPUT.txt', 'w')  
-    CLEAN_OUTPUT_FILE     = open(RELATED_ALERTS_PATH + 'CLEAN/OUTPUT.txt', 'w')
+    BUGGY_OUTPUT_FILE     = open(RELATED_ALERTS_PATH + 'BUGGY_OUTPUT.txt', 'w')
+    CLEAN_OUTPUT_FILE     = open(RELATED_ALERTS_PATH + 'CLEAN_OUTPUT.txt', 'w')
  
     for relatedLines in open(COMMIT_LOG_PATH + 'BUG_RELATED.txt'):
          

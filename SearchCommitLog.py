@@ -63,7 +63,7 @@ def searchCommitLog(PROJECT_ADDR, KEYWORD):
                 cleanFileSHA = str(diff_item.b_blob)[0:7]                           # Clean revision First 7 SHA code
                 
                 ### find changed lines ###
-                diffInfo = str(diff_item.diff).split('\n')
+                diffInfo = str(diff_item.diff).split('\\n')
                 changedLines = list()
                 for line in diffInfo:                        
                     if "@@" in line:

@@ -7,7 +7,7 @@ OUTPUT_PATH = 'OUTPUT/'
 TOOL_PATH = 'Tools/'
 PMD_PATH = TOOL_PATH + 'PMD-6.0.0/'
 GIT_PROJECT_LIST = [projects.strip() for projects in open(GIT_REPO_PATH + 'GitRepoList.txt', 'r')]
-JAVA_CATEGORY_LIST = ['']
+CATEGORY_LIST = [category.split(',')[1].strip() for category in open('./Tools/PMD_Rules(5.3.1).csv')]
 
 if not os.path.exists(GIT_REPO_PATH):                   # create GIT_REPO path
     os.makedirs(GIT_REPO_PATH)
